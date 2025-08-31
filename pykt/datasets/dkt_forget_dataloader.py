@@ -4,7 +4,7 @@ from re import L
 import pandas as pd
 import torch
 from torch.utils.data import Dataset
-from torch import FloatTensor, LongTensor
+from torch import FloatTensor, LongTensor # degistirildi
 import numpy as np
 
 ModelConf = {
@@ -158,7 +158,7 @@ class DktForgetDataset(Dataset):
             if "timestamps" in row:
                 dori["tseqs"].append([int(_) for _ in row["timestamps"].split(",")])
             if "usetimes" in row:
-                dori["utseqs"].append([int(_) for _ in row["usetimes"].split(",")])
+                dori["utseqs"].append([int(float(_)) for _ in row["usetimes"].split(",")]) # degistirildi
 
             dori["rseqs"].append([int(_) for _ in row["responses"].split(",")])
             dori["smasks"].append([int(_) for _ in row["selectmasks"].split(",")])

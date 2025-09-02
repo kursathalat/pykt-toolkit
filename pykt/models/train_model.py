@@ -261,7 +261,7 @@ def model_forward(model, data, rel=None):
     return loss
     
 
-def train_model(model, train_loader, valid_loader, num_epochs, opt, ckpt_path, test_loader=None, test_window_loader=None, save_model=False, data_config=None, fold=None):
+def train_model(model, train_loader, valid_loader, num_epochs, opt, ckpt_path, test_loader=None, test_window_loader=None, save_model=False, data_config=None, fold=None, log_fn=None):
     max_auc, best_epoch = 0, -1
     train_step = 0
 
@@ -317,7 +317,8 @@ def train_model(model, train_loader, valid_loader, num_epochs, opt, ckpt_path, t
         ### atkt 有diff， 以下代码导致的
         ### auc, acc = round(auc, 4), round(acc, 4)
 
-        if auc > max_auc+1e-3:
+        _is_best = True if auc > max_auc + 1e-3 else False  # is this a new best?
+        if _is_best:
             if save_model:
                 torch.save(model.state_dict(), os.path.join(ckpt_path, model.emb_type+"_model.ckpt"))
             max_auc = auc
@@ -332,6 +333,25 @@ def train_model(model, train_loader, valid_loader, num_epochs, opt, ckpt_path, t
                     save_test_path = os.path.join(ckpt_path, model.emb_type+"_test_window_predictions.txt")
                     window_testauc, window_testacc = evaluate(model, test_window_loader, model.model_name, save_test_path)
             validauc, validacc = auc, acc
+
+        if log_fn is not None:
+            try:
+                _lr = None
+                if hasattr(opt, "param_groups") and opt.param_groups:
+                    _lr = opt.param_groups[0].get("lr", None)
+                log_fn(
+                    epoch=int(i),
+                    train_loss=float(loss_mean),
+                    valid_auc=float(auc),
+                    valid_acc=float(acc),
+                    lr=_lr,
+                    is_best=bool(_is_best),
+                    best_auc=float(max_auc),
+                    best_epoch=int(best_epoch),
+                    train_step=int(train_step),
+                )
+            except Exception:
+                pass
         print(f"Epoch: {i}, validauc: {validauc:.4}, validacc: {validacc:.4}, best epoch: {best_epoch}, best auc: {max_auc:.4}, train loss: {loss_mean}, emb_type: {model.emb_type}, model: {model.model_name}, save_dir: {ckpt_path}")
         print(f"            testauc: {round(testauc,4)}, testacc: {round(testacc,4)}, window_testauc: {round(window_testauc,4)}, window_testacc: {round(window_testacc,4)}")
 
